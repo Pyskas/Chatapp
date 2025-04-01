@@ -1,19 +1,24 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
+import { useAuthStore } from "../store/useAuthStore";
 import SidebarSkeleton from "./skeletons/SidebarSkeleton";
 import { Users } from "lucide-react";
-import { useAuthStore } from "../store/useAuthStore";
 
 const Sidebar = () => {
-  const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading }= useChatStore()
+  const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading } = useChatStore();
 
-  const { onlineUsers }=useAuthStore();
+  const { onlineUsers } = useAuthStore();
+  const [showOnlineOnly, setShowOnlineOnly] = useState(false);
 
   useEffect(() => {
     getUsers();
   }, [getUsers]);
-  
-  if(isUsersLoading) return <SidebarSkeleton />
+
+  const filteredUsers = showOnlineOnly
+    ? users.filter((user) => onlineUsers.includes(user._id))
+    : users;
+
+  if (isUsersLoading) return <SidebarSkeleton />;
 
   return (
     <aside className="flex flex-col w-20 h-full transition-all duration-200 border-r lg:w-72 border-base-300">
@@ -22,11 +27,23 @@ const Sidebar = () => {
           <Users className="size-6" />
           <span className="hidden font-medium lg:block">Контакты</span>
         </div>
-        {/* TODO: Онлайн фильтр */}
+        {/* TODO: Online filter toggle */}
+        <div className="items-center hidden gap-2 mt-3 lg:flex">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showOnlineOnly}
+              onChange={(e) => setShowOnlineOnly(e.target.checked)}
+              className="checkbox checkbox-sm"
+            />
+            <span className="text-sm">Показывать онлайн</span>
+          </label>
+          <span className="text-xs text-zinc-500">({onlineUsers.length - 1} онлайн)</span>
+        </div>
       </div>
 
       <div className="w-full py-3 overflow-y-auto">
-      {users.map((user) => (
+        {filteredUsers.map((user) => (
           <button
             key={user._id}
             onClick={() => setSelectedUser(user)}
@@ -49,18 +66,21 @@ const Sidebar = () => {
               )}
             </div>
 
-            {/* Информация о пользователях только на больших экранах */}
+            {/* User info - only visible on larger screens */}
             <div className="hidden min-w-0 text-left lg:block">
               <div className="font-medium truncate">{user.fullName}</div>
               <div className="text-sm text-zinc-400">
-                {onlineUsers.includes(user._id) ? "Online" : "Offline"}
+                {onlineUsers.includes(user._id) ? "Онлайн" : "Офлайн"}
               </div>
             </div>
           </button>
         ))}
+        
+        {filteredUsers.length === 0 && (
+          <div className="py-4 text-center text-zinc-500">Нету онлайн</div>
+        )}
       </div>
     </aside>
   );
 };
-
 export default Sidebar;
